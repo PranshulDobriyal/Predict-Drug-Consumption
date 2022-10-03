@@ -1,3 +1,4 @@
+from cProfile import label
 import numpy as np
 import pandas as pd
 from feature_selection import select_features
@@ -27,6 +28,10 @@ idx_to_name = {
 
 def br():
     print("#"*85)
+    print("\n")
+
+def hr():
+    print("-"*85)
 
 def plot_confusion_matrices(path, confusion, clf):
     for i in range(len(confusion)):
@@ -41,6 +46,34 @@ def plot_confusion_matrices(path, confusion, clf):
             os.makedirs(test_path)
         plt.savefig(f"{train_path}/{idx_to_name[i]}.jpg")
         plt.savefig(f"{test_path}/{idx_to_name[i]}.jpg")
+
+def plot_combined_confusion_matrices(name, confusion, clf):
+    path = "combined_confusion_matrix"
+    train_final_conf =[
+        [0, 0],
+        [0, 0]
+    ]
+    test_final_conf = [
+        [0, 0],
+        [0, 0]
+    ]
+    for i in range(len(confusion)):
+        train_final_conf += confusion[i][0]
+        test_final_conf += confusion[i][1]
+
+
+    ConfusionMatrixDisplay(confusion_matrix=train_final_conf, display_labels=clf[i].classes_).plot()
+    train_path = f"{path}/Train"
+    if not os.path.isdir(train_path):
+        os.makedirs(train_path)
+    plt.savefig(f"{train_path}/{name}.jpg")
+
+    ConfusionMatrixDisplay(confusion_matrix=test_final_conf, display_labels=clf[i].classes_).plot()
+    test_path = f"{path}/Test"
+    if not os.path.isdir(test_path):
+        os.makedirs(test_path)
+    plt.savefig(f"{test_path}/{name}.jpg")
+
 
 def plot_roc(path, roc):
     path = f"{path}/roc_curves/"
@@ -58,6 +91,27 @@ def plot_roc(path, roc):
         plt.xlabel("False Positive Rate")
         plt.ylabel("True Positive Rate")
         plt.savefig(f"{path}/{idx_to_name[i]}")
+
+def plot_combined_roc(name, roc):
+    path = f"combined_roc_curves/"
+    plt.figure()
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    final_tpr = []
+    final_fpr = []
+    for i in range(len(roc)):
+ 
+        #Extract data from roc variable
+        fpr, tpr, thresh = roc[i]
+    
+        plt.plot(fpr, tpr, lw = 2, label = idx_to_name[i])
+        
+    #Generate and save plot
+    plt.plot([0, 1], [0, 1], linestyle='--', label='Baseline')
+    plt.legend()
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.savefig(f"{path}/{name}")
 
 def run_classifier(classifier, input_columns, output_columns):
     clf = []
@@ -137,13 +191,16 @@ for clas, name in classifiers:
     dt = run_classifier(clas, selected_input_columns, selected_output_columns)
     path = f"visual_data/{name}"
     plot_confusion_matrices(path, dt["Confusion"], dt["Classifier"])
+    plot_combined_confusion_matrices(name, dt["Confusion"], dt["Classifier"])
     plot_roc(path, dt["ROC"])
+    plot_combined_roc(name, dt["ROC"])
 
     for i in range(len(dt["Accuracy"])):
         acc = dt["Accuracy"][i]
-        br()
+        hr()
         print(f"{idx_to_name[i]} -- \n\n")
         print(f"\nTrain Accuracy: {acc[0]} \n")
         print(f"Test Accuracy: {acc[1]}")
         print(f"\nPrecision: {acc[2]}")
         print(f"\nRecall: {acc[3]}")
+        
